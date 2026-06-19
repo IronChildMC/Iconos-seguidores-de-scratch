@@ -1,8 +1,6 @@
-<!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Followers Loader</title>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
 <style>
 body{
@@ -12,7 +10,7 @@ body{
     text-align:center;
 }
 
-#grid{
+#result{
     display:flex;
     flex-wrap:wrap;
     justify-content:center;
@@ -24,83 +22,77 @@ body{
 }
 
 .user img{
-    width:64px;
-    height:64px;
+    width:70px;
+    height:70px;
     border-radius:50%;
 }
 </style>
-</head>
-
-<body>
-
-<h1>Seguidores (carga progresiva)</h1>
-<button onclick="start()">Cargar</button>
-
-<div id="grid"></div>
 
 <script>
-const username = "mostaza123";
 
-let offset = 0;
-const limit = 40;
-let loading = false;
+var username = "mostaza123";
+var page = 1;
 
-async function loadBatch(){
-    if(loading) return;
-    loading = true;
-
-    const res = await fetch(
-        `https://api.scratch.mit.edu/users/${username}/followers?limit=${limit}&offset=${offset}`
-    );
-
-    if(!res.ok){
-        console.log("Fin o error");
-        loading = false;
-        return;
-    }
-
-    const data = await res.json();
-
-    if(data.length === 0){
-        console.log("No hay más seguidores");
-        loading = false;
-        return;
-    }
-
-    for(const user of data){
-        addUser(user.username);
-        await sleep(80); // 👈 uno a uno (efecto bonito)
-    }
-
-    offset += limit;
-    loading = false;
-
-    // sigue cargando automáticamente
-    loadBatch();
+function load(){
+    getPage();
 }
 
-function addUser(name){
-    const img = `https://uploads.scratch.mit.edu/get_image/user/${name}_60x60.png`;
+function getPage(){
 
-    const div = document.createElement("div");
-    div.className = "user";
+    $.get("https://scratch.mit.edu/users/" + username + "/followers/?page=" + page, function(data){
 
-    div.innerHTML = `
-        <img src="${img}">
-        <div>${name}</div>
-    `;
+        var $dom = $(data);
+        var $users = $dom.find("span.title").children();
 
-    document.getElementById("grid").appendChild(div);
+        if($users.length === 0){
+            console.log("Fin de páginas");
+            return;
+        }
+
+        var i = 0;
+
+        function addOne(){
+
+            if(i >= $users.length){
+                page++;
+                setTimeout(getPage, 500);
+                return;
+            }
+
+            var user = $($users[i]).text().trim();
+            i++;
+
+            if(!user){
+                addOne();
+                return;
+            }
+
+            var img = "https://uploads.scratch.mit.edu/get_image/user/" + user + "_60x60.png";
+
+            $("#result").append(`
+                <div class="user">
+                    <img src="${img}">
+                    <div>${user}</div>
+                </div>
+            `);
+
+            setTimeout(addOne, 60); // 👈 uno a uno suave
+        }
+
+        addOne();
+
+    }).fail(function(){
+        console.log("Error o bloqueado o fin real");
+    });
 }
 
-function sleep(ms){
-    return new Promise(r => setTimeout(r, ms));
-}
-
-function start(){
-    loadBatch();
-}
 </script>
+</head>
+
+<body onload="load()">
+
+<h1>Followers</h1>
+<div id="result"></div>
 
 </body>
 </html>
