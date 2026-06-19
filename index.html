@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>Descargar seguidores Scratch</title>
+<title>Followers Scratch</title>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
 <style>
 body{
@@ -12,105 +14,72 @@ body{
     text-align:center;
 }
 
-#followers{
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px;
-    justify-content:center;
-    margin-top:20px;
-}
-
 .user{
-    width:90px;
+    display:inline-block;
+    margin:10px;
 }
 
 .user img{
-    width:64px;
-    height:64px;
     border-radius:50%;
-}
-
-button{
-    padding:10px 15px;
-    margin:10px;
-    cursor:pointer;
+    width:80px;
+    height:80px;
 }
 </style>
-</head>
-
-<body>
-
-<h1>Seguidores de mostaza123</h1>
-
-<button onclick="descargarTodos()">📦 Descargar iconos</button>
-
-<div id="followers"></div>
-
-<!-- JSZip -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <script>
-const username = "mostaza123";
-const container = document.getElementById("followers");
 
-let usuarios = [];
+var username = "mostaza123";
+var page = 1;
 
-async function cargarPagina(offset){
-    const r = await fetch(`https://api.scratch.mit.edu/users/${username}/followers?limit=40&offset=${offset}`);
-    if(!r.ok) return [];
-    return await r.json();
+function load(){
+    getPage();
 }
 
-async function cargarTodos(){
-    let offset = 0;
+function getPage(){
+    $.get("https://scratch.mit.edu/users/" + username + "/followers/?page=" + page, function(data){
 
-    while(true){
-        const data = await cargarPagina(offset);
-        if(data.length === 0) break;
+        var $dom = $(data);
 
-        data.forEach(u => {
-            usuarios.push(u);
+        // usuarios en la página
+        var $users = $dom.find("span.title").children();
 
-            const div = document.createElement("div");
-            div.className = "user";
+        if($users.length === 0){
+            console.log("Fin de páginas");
+            return;
+        }
 
-            div.innerHTML = `
-                <img src="${u.profile.images['90x90']}">
-                <div>${u.username}</div>
-            `;
+        var $out = $("#result");
 
-            container.appendChild(div);
+        $users.each(function(){
+
+            var user = $(this).text().trim();
+            if(!user) return;
+
+            var img = "https://uploads.scratch.mit.edu/get_image/user/" + user + "_60x60.png";
+
+            $out.append(`
+                <div class="user">
+                    <img src="${img}">
+                    <div>${user}</div>
+                </div>
+            `);
         });
 
-        offset += 40;
-    }
+        page++;
+        getPage(); // siguiente página
+
+    }).fail(function(){
+        console.log("Error o bloqueado por CORS");
+    });
 }
 
-async function descargarTodos(){
-    const zip = new JSZip();
-    const carpeta = zip.folder("iconos_scratch");
-
-    for(let i = 0; i < usuarios.length; i++){
-        const u = usuarios[i];
-
-        const url = u.profile.images['90x90'];
-
-        const response = await fetch(url);
-        const blob = await response.blob();
-
-        carpeta.file(`${u.username}.png`, blob);
-    }
-
-    const content = await zip.generateAsync({type:"blob"});
-
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(content);
-    a.download = "followers_icons.zip";
-    a.click();
-}
-
-cargarTodos();
 </script>
+</head>
+
+<body onload="load()">
+
+<h1>Followers</h1>
+<div id="result"></div>
 
 </body>
 </html>
