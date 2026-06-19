@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
 <style>
 body{
@@ -11,6 +12,12 @@ body{
     color:white;
     font-family:Arial;
     text-align:center;
+}
+
+button{
+    margin:10px;
+    padding:10px;
+    cursor:pointer;
 }
 
 #result{
@@ -22,6 +29,12 @@ body{
 
 .user{
     width:90px;
+    cursor:pointer;
+    transition:0.2s;
+}
+
+.user:hover{
+    transform:scale(1.1);
 }
 
 .user img{
@@ -65,8 +78,8 @@ function getPage(){
                     return;
                 }
 
-                var $userEl = $($users[i]).closest("a").parent().parent();
                 var user = $($users[i]).text().trim();
+                var $parent = $($users[i]).closest("a").parent();
 
                 i++;
 
@@ -75,26 +88,24 @@ function getPage(){
                     return;
                 }
 
-                // 🔥 AQUÍ está la clave (tu descubrimiento)
-                var img = $userEl.find("img").attr("data-original");
+                var img = $parent.find("img").attr("data-original");
 
                 if(img && img.startsWith("//")){
                     img = "https:" + img;
                 }
 
-                // fallback por si falla
                 if(!img){
                     img = "https://scratch.mit.edu/images/user-default.png";
                 }
 
                 $("#result").append(`
-                    <div class="user">
+                    <div class="user" onclick="openUser('${user}')">
                         <img src="${img}">
                         <div>${user}</div>
                     </div>
                 `);
 
-                setTimeout(addOne, 60); // uno a uno 😄
+                setTimeout(addOne, 60);
             }
 
             addOne();
@@ -111,12 +122,52 @@ function getPage(){
     });
 }
 
+// 🌐 abrir perfil Scratch
+function openUser(user){
+    window.open("https://scratch.mit.edu/users/" + user, "_blank");
+}
+
+// 📦 descargar ZIP
+async function downloadZip(){
+
+    const zip = new JSZip();
+    const folder = zip.folder("scratch_icons");
+
+    const users = document.querySelectorAll(".user");
+
+    for(let i = 0; i < users.length; i++){
+
+        const img = users[i].querySelector("img").src;
+        const name = users[i].querySelector("div").innerText;
+
+        try{
+            const response = await fetch(img);
+            const blob = await response.blob();
+
+            folder.file(name + ".png", blob);
+
+        }catch(e){
+            console.log("Error con:", name);
+        }
+    }
+
+    const content = await zip.generateAsync({type:"blob"});
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(content);
+    a.download = "followers_icons.zip";
+    a.click();
+}
+
 </script>
+
 </head>
 
 <body onload="load()">
 
 <h1>Followers de Scratch</h1>
+
+<button onclick="downloadZip()">📦 Descargar iconos en ZIP</button>
 
 <div id="result"></div>
 
