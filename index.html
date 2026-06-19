@@ -1,8 +1,7 @@
-<!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Seguidores Scratch</title>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
 <style>
 body{
     background:#111;
@@ -10,67 +9,94 @@ body{
     font-family:Arial;
     text-align:center;
 }
-#followers{
+
+#result{
     display:flex;
     flex-wrap:wrap;
-    gap:10px;
     justify-content:center;
+    gap:10px;
 }
+
 .user{
     width:90px;
 }
+
 .user img{
-    width:64px;
-    height:64px;
+    width:70px;
+    height:70px;
     border-radius:50%;
 }
 </style>
-</head>
-<body>
-
-<h1>Seguidores de mostaza123</h1>
-<div id="followers"></div>
 
 <script>
-const username = "mostaza123";
-const container = document.getElementById("followers");
 
-async function cargarPagina(offset){
-    const r = await fetch(
-        `https://api.scratch.mit.edu/users/${username}/followers?limit=40&offset=${offset}`
-    );
+var username = "mostaza123";
+var page = 1;
 
-    if(!r.ok) return [];
-
-    return await r.json();
+function load(){
+    getPage();
 }
 
-async function cargarTodos(){
-    let offset = 0;
+function getPage(){
 
-    while(true){
-        const seguidores = await cargarPagina(offset);
+    $.get("https://scratch.mit.edu/users/" + username + "/followers/?page=" + page, function(data){
 
-        if(seguidores.length === 0) break;
+        var $dom = $(data);
+        var $users = $dom.find("span.title").children();
 
-        seguidores.forEach(user => {
-            const div = document.createElement("div");
-            div.className = "user";
+        if($users.length === 0){
+            console.log("Fin de páginas");
+            return;
+        }
 
-            div.innerHTML = `
-                <img src="${user.profile.images['90x90']}" loading="lazy">
-                <div>${user.username}</div>
-            `;
+        var i = 0;
 
-            container.appendChild(div);
-        });
+        function addOne(){
 
-        offset += 40;
-    }
+            if(i >= $users.length){
+                page++;
+                setTimeout(getPage, 500);
+                return;
+            }
+
+            var user = $($users[i]).text().trim();
+            i++;
+
+            if(!user){
+                addOne();
+                return;
+            }
+
+            $.get("https://scratch.mit.edu/users/" + username + "/followers/?page=" + page, function(data){
+
+    console.log(data);
+
+    var $dom = $(data);
+
+            $("#result").append(`
+                <div class="user">
+                    <img src="${img}">
+                    <div>${user}</div>
+                </div>
+            `);
+
+            setTimeout(addOne, 60); // 👈 uno a uno suave
+        }
+
+        addOne();
+
+    }).fail(function(){
+        console.log("Error o bloqueado o fin real");
+    });
 }
 
-cargarTodos();
 </script>
+</head>
+
+<body onload="load()">
+
+<h1>Followers</h1>
+<div id="result"></div>
 
 </body>
 </html>
