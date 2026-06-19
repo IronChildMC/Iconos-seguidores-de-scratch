@@ -1,8 +1,7 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>Followers Scrat ch</title>
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
@@ -31,19 +30,10 @@ body{
     border-radius:50%;
     object-fit:cover;
 }
-
-#debug{
-    margin-top:20px;
-    padding:10px;
-    text-align:left;
-    white-space:pre-wrap;
-    max-height:300px;
-    overflow:auto;
-    border:1px solid #444;
-}
 </style>
 
 <script>
+
 var username = "mostaza123";
 var page = 1;
 
@@ -55,15 +45,9 @@ function getPage(){
 
     $.get(
         "https://scratch.mit.edu/users/" + username + "/followers/?page=" + page,
-
         function(data){
 
-            // Mostrar una parte del HTML recibido
-            document.getElementById("debug").textContent =
-                data.substring(0, 5000);
-
             var $dom = $(data);
-
             var $users = $dom.find("span.title").children();
 
             if($users.length === 0){
@@ -81,9 +65,9 @@ function getPage(){
                     return;
                 }
 
+                var $userEl = $($users[i]).closest("a").parent().parent();
                 var user = $($users[i]).text().trim();
 
-console.log($($users[i]).closest("li").html());
                 i++;
 
                 if(!user){
@@ -91,8 +75,17 @@ console.log($($users[i]).closest("li").html());
                     return;
                 }
 
-                // Imagen temporal para pruebas
-                var img = "https://scratch.mit.edu/images/user-default.png";
+                // 🔥 AQUÍ está la clave (tu descubrimiento)
+                var img = $userEl.find("img").attr("data-original");
+
+                if(img && img.startsWith("//")){
+                    img = "https:" + img;
+                }
+
+                // fallback por si falla
+                if(!img){
+                    img = "https://scratch.mit.edu/images/user-default.png";
+                }
 
                 $("#result").append(`
                     <div class="user">
@@ -101,28 +94,31 @@ console.log($($users[i]).closest("li").html());
                     </div>
                 `);
 
-                setTimeout(addOne, 60);
+                setTimeout(addOne, 60); // uno a uno 😄
             }
 
             addOne();
+
+        }
+    ).fail(function(xhr){
+
+        if(xhr.status === 404){
+            console.log("No hay más páginas");
+            return;
         }
 
-    ).fail(function(xhr, status, error){
-        console.log("Error:", status, error);
+        console.log("Error:", xhr.status);
     });
 }
-</script>
 
+</script>
 </head>
 
 <body onload="load()">
 
-<h1>Followers</h1>
+<h1>Followers de Scratch</h1>
 
 <div id="result"></div>
-
-<h2>Debug HTML recibido</h2>
-<div id="debug"></div>
 
 </body>
 </html>
